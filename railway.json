@@ -1,9 +1,0 @@
-{
-  "build": {
-    "command": "echo 'Static site'"
-  },
-  "deploy": {
-    "startCommand": "npx serve -s .",
-    "healthcheckPath": "/"
-  }
-}
