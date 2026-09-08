@@ -326,26 +326,26 @@
         // ============================================
         // VERIFICAR SESIÓN AL CARGAR
         // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const user = localStorage.getItem('user');
-            if (user) {
-                try {
-                    const userData = JSON.parse(user);
-                    if (userData.token && userData.rol === 'admin') {
-                        console.log('✅ Sesión existente encontrada, redirigiendo...');
-                        window.location.href = 'index.html';
-                        return;
-                    } else {
-                        // Si no es admin o no tiene token, limpiar
-                        localStorage.removeItem('user');
-                    }
-                } catch (e) {
-                    console.warn('⚠️ Error al parsear sesión, limpiando...');
-                    localStorage.removeItem('user');
-                }
-            }
-            console.log('🔓 Mostrando formulario de login');
-        });
+        //document.addEventListener('DOMContentLoaded', function() {
+        //    const user = localStorage.getItem('user');
+        //    if (user) {
+        //        try {
+         //           const userData = JSON.parse(user);
+         //           if (userData.token && userData.rol === 'admin') {
+         //               console.log('✅ Sesión existente encontrada, redirigiendo...');
+         //               window.location.href = 'index.html';
+         //               return;
+         //           } else {
+         //               // Si no es admin o no tiene token, limpiar
+         //               localStorage.removeItem('user');
+          //          }
+           //     } catch (e) {
+         //           console.warn('⚠️ Error al parsear sesión, limpiando...');
+         //           localStorage.removeItem('user');
+         //       }
+          //  }
+         //   console.log('🔓 Mostrando formulario de login');
+        //});
 
         // ============================================
         // ENTER PARA ENVIAR
