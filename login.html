@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar Sesión - Inventario</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a3c5e 0%, #2a5c7e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .login-container .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-container .logo i {
+            font-size: 48px;
+            color: #1a3c5e;
+            background: #e8f0fe;
+            padding: 20px;
+            border-radius: 50%;
+        }
+        .login-container .logo h1 {
+            font-size: 24px;
+            color: #1a3c5e;
+            margin-top: 12px;
+        }
+        .login-container .logo p {
+            color: #888;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a3c5e;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #1a3c5e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-login:hover {
+            background: #2a5c7e;
+        }
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            font-size: 14px;
+        }
+        .error-message.show {
+            display: block;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #999;
+            font-size: 13px;
+        }
+        .password-toggle {
+            position: relative;
+        }
+        .password-toggle input {
+            padding-right: 45px;
+        }
+        .password-toggle .toggle-btn {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .password-toggle .toggle-btn:hover {
+            color: #333;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .info-text {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+        }
+        .info-text i {
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="logo">
+            <i class="fas fa-phone-alt"></i>
+            <h1>Inventario</h1>
+            <p>Control de stock de teléfonos</p>
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorText">Credenciales incorrectas</span>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="email"><i class="fas fa-envelope"></i> Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="usuario@ejemplo.com"
+                    required
+                />
+            </div>
+
+            <div class="form-group password-toggle">
+                <label for="password"><i class="fas fa-lock"></i> Contraseña</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="••••••••"
+                    required
+                />
+                <button type="button" class="toggle-btn" onclick="togglePassword()">
+                    <i class="fas fa-eye" id="eyeIcon"></i>
+                </button>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="info-text">
+            <i class="fas fa-shield-alt"></i> Contacta al administrador para obtener tus credenciales.
+        </div>
+
+        <div class="footer">
+            &copy; 2026 - Sistema de Inventario
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN
+        // ============================================
+        const API_URL = 'https://inventario-api-production-afa2.up.railway.app';
+
+        // ============================================
+        // FUNCIONES
+        // ============================================
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+
+       async function handleLogin(event) {
+    event.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const loginBtn = document.getElementById('loginBtn');
+
+    errorMessage.classList.remove('show');
+
+    if (!email || !password) {
+        showError('Por favor, completa todos los campos.');
+        return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loading-spinner"></span> Validando...';
+
+    try {
+        console.log('📤 Enviando login a:', `${API_URL}/api/auth/login`);
+        console.log('📤 Email:', email);
+
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password,
+                device: "web"
+            })
+        });
+
+        console.log('📥 Estado de la respuesta:', response.status);
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('❌ Error al parsear JSON:', parseError);
+            showError('Error en el servidor. Intenta más tarde.');
+            return;
+        }
+
+        console.log('📥 Datos recibidos:', data);
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                showError('❌ Acceso denegado. Solo administradores pueden acceder al panel web.');
+            } else if (response.status === 401) {
+                showError('❌ Credenciales incorrectas. Verifica tu email y contraseña.');
+            } else {
+                showError(data.detail || 'Error al iniciar sesión. Código: ' + response.status);
+            }
+            return;
+        }
+
+        // Verificar que el token existe
+        if (!data.token) {
+            console.error('❌ No se recibió token en la respuesta');
+            showError('Error en el servidor: no se recibió token de autenticación.');
+            return;
+        }
+
+        // Guardar datos de sesión con el token
+        const userData = {
+            id: data.id || 'unknown',
+            email: data.email || email,
+            nombre: data.nombre || data.email || email,
+            rol: data.rol || 'vendedor',
+            token: data.token
+        };
+
+        console.log('✅ Guardando sesión:', userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        // Redirigir al dashboard
+        console.log('🔀 Redirigiendo a index.html');
+        window.location.href = 'index.html';
+
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        showError('Error de conexión. Verifica tu conexión a internet. Detalle: ' + error.message);
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
+    }
+}
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        // ============================================
+        // VERIFICAR SESIÓN AL CARGAR
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = localStorage.getItem('user');
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    if (userData.token && userData.rol === 'admin') {
+                        console.log('✅ Sesión existente encontrada, redirigiendo...');
+                        window.location.href = 'index.html';
+                        return;
+                    } else {
+                        // Si no es admin o no tiene token, limpiar
+                        localStorage.removeItem('user');
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Error al parsear sesión, limpiando...');
+                    localStorage.removeItem('user');
+                }
+            }
+            console.log('🔓 Mostrando formulario de login');
+        });
+
+        // ============================================
+        // ENTER PARA ENVIAR
+        // ============================================
+        document.getElementById('loginForm').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin(e);
+            }
+        });
+    </script>
+
+</body>
+</html>

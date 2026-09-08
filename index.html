@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>Panel de Control - Inventario</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ===== RESET Y BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 250px;
+            background: #1a3c5e;
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+        .sidebar .logo {
+            text-align: center;
+            padding: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar .logo i {
+            margin-right: 10px;
+        }
+        .sidebar nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: #4fc3f7;
+        }
+        .sidebar nav a i {
+            width: 25px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        .sidebar .user-info {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 14px;
+        }
+        .sidebar .user-info .name {
+            font-weight: bold;
+        }
+        .sidebar .user-info .role {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+        }
+        .sidebar .user-info .logout {
+            color: #ff6b6b;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .sidebar .user-info .logout:hover {
+            text-decoration: underline;
+        }
+
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 101;
+            background: #1a3c5e;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        .main-content .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .main-content .header h1 {
+            font-size: 28px;
+            color: #1a3c5e;
+        }
+        .main-content .header .date {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+        }
+        .card .card-title {
+            color: #888;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .card .card-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a3c5e;
+            margin: 8px 0;
+        }
+        .card .card-icon {
+            font-size: 24px;
+            color: #4fc3f7;
+            float: right;
+        }
+        .card .card-change {
+            font-size: 13px;
+            color: #28a745;
+        }
+        .card .card-change.negative {
+            color: #dc3545;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .chart-container h3 {
+            color: #1a3c5e;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .chart-container canvas {
+            max-height: 200px;
+            max-width: 100%;
+        }
+
+        .alertas-stock {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alertas-stock.show {
+            display: block;
+        }
+        .alertas-stock h4 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        .alertas-stock .alerta-item {
+            display: inline-block;
+            background: #ffeeba;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin: 3px 5px 3px 0;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .filtros input,
+        .filtros select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1 1 150px;
+            min-width: 120px;
+        }
+        .filtros input:focus,
+        .filtros select:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+        .filtros .btn {
+            flex: 0 0 auto;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-container .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .table-container .table-header h2 {
+            font-size: 18px;
+            color: #1a3c5e;
+        }
+        .table-container .table-header .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 600px;
+        }
+        th {
+            background: #f8f9fa;
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e9ecef;
+            word-break: break-word;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-disponible {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-vendido {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .badge-retirado {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .badge-reservado {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #1a3c5e;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2a5c7e;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #1a3c5e;
+            color: #1a3c5e;
+        }
+        .btn-outline:hover {
+            background: #1a3c5e;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 20px;
+        }
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #1a3c5e;
+        }
+        .modal-content .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-content .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .modal-content .form-group input,
+        .modal-content .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .modal-content .form-group input:focus,
+        .modal-content .form-group select:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+        .modal-content .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .loading i {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .acciones-venta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .acciones-venta .btn-sm {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        @media (max-width: 992px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+            .dashboard-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+                padding-top: 60px;
+            }
+            .dashboard-cards {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            .card .card-value {
+                font-size: 22px;
+            }
+            .main-content .header h1 {
+                font-size: 22px;
+            }
+            .filtros input,
+            .filtros select {
+                flex: 1 1 100%;
+                min-width: 100%;
+            }
+            .filtros .btn {
+                flex: 1 1 45%;
+            }
+            table {
+                font-size: 12px;
+                min-width: 500px;
+            }
+            th, td {
+                padding: 6px 8px;
+            }
+            .modal-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            .table-container {
+                padding: 12px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-cards {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .card {
+                padding: 12px;
+            }
+            .card .card-value {
+                font-size: 18px;
+            }
+            .card .card-title {
+                font-size: 11px;
+            }
+            .main-content .header h1 {
+                font-size: 18px;
+            }
+            .table-container .table-header h2 {
+                font-size: 15px;
+            }
+            .btn-sm {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== OVERLAY PARA MÓVIL ===== -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- ===== BOTÓN HAMBURGUESA ===== -->
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo">
+            <i class="fas fa-phone"></i>
+            <span>Inventario</span>
+        </div>
+        <nav>
+            <a href="#" class="active" data-page="dashboard">
+                <i class="fas fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+            <a href="#" data-page="equipos">
+                <i class="fas fa-mobile-alt"></i><span>Equipos</span>
+            </a>
+            <a href="#" data-page="ventas">
+                <i class="fas fa-shopping-cart"></i><span>Ventas</span>
+            </a>
+            <a href="#" data-page="usuarios">
+                <i class="fas fa-users"></i><span>Usuarios</span>
+            </a>
+        </nav>
+        <div class="user-info">
+            <div class="name"><i class="fas fa-user-circle"></i> Administrador</div>
+            <div class="role">Dueño</div>
+            <span class="logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</span>
+        </div>
+    </aside>
+
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <main class="main-content" id="mainContent">
+        <div class="header">
+            <h1 id="pageTitle">Dashboard</h1>
+            <span class="date" id="currentDate"></span>
+        </div>
+
+        <div id="pageContent"></div>
+    </main>
+
+    <!-- ===== MODAL ===== -->
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- JAVASCRIPT COMPLETO                          -->
+    <!-- ============================================ -->
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN
+        // ============================================
+        const API_URL = 'https://inventario-api-production-afa2.up.railway.app';
+        let graficoVentas = null;
+        let graficoStock = null;
+
+        // ============================================
+        // FUNCIÓN PARA FETCH CON TOKEN
+        // ============================================
+        async function fetchAPI(endpoint, options = {}) {
+            console.log(`📡 fetchAPI: ${endpoint}`);
+            
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                console.error('❌ No hay usuario en localStorage');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            if (!user || !user.token) {
+                console.error('❌ No hay token disponible');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${user.token}`
+            };
+
+            const url = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+            console.log(`📤 URL completa: ${API_URL}${url}`);
+            
+            const response = await fetch(`${API_URL}${url}`, {
+                ...options,
+                headers: { ...headers, ...options.headers }
+            });
+
+            if (response.status === 401) {
+                console.warn('⚠️ Token expirado o inválido');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                throw new Error('Sesión expirada');
+            }
+
+            return response;
+        }
+
+        // ============================================
+        // TOGGLE SIDEBAR
+        // ============================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    toggleSidebar();
+                }
+            });
+        });
+
+        // ============================================
+        // VERIFICACIÓN DE SESIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Verificando sesión...');
+
+            const userDataStr = localStorage.getItem('user');
+            console.log('📦 Datos en localStorage:', userDataStr);
+
+            if (!userDataStr) {
+                console.log('❌ No hay sesión activa');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const userData = JSON.parse(userDataStr);
+                console.log('👤 Usuario parseado:', userData);
+
+                if (!userData.token) {
+                    console.log('❌ No hay token en los datos');
+                    localStorage.removeItem('user');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                if (!userData.email) {
+                    console.log('❌ No hay email en los datos');
+                    localStorage.removeItem('user');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                if (userData.rol !== 'admin') {
+                    console.log('❌ No es admin, redirigiendo...');
+                    localStorage.removeItem('user');
+                    alert('❌ Acceso denegado. Solo administradores pueden acceder a esta página.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('✅ Sesión válida. Bienvenido admin!');
+
+                const userNameElement = document.querySelector('.user-info .name');
+                if (userNameElement) {
+                    userNameElement.innerHTML =
+                        `<i class="fas fa-user-circle"></i> ${userData.nombre || userData.email}`;
+                }
+
+                document.getElementById('currentDate').textContent =
+                    new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long',
+                        day: 'numeric' });
+
+                console.log('📅 Fecha actualizada');
+
+                const initialPage = window.location.hash.replace('#', '') || 'dashboard';
+                console.log(`📄 Página inicial: ${initialPage}`);
+                loadPage(initialPage);
+
+            } catch (e) {
+                console.error('❌ Error al verificar sesión:', e);
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+            }
+        });
+
+        // ============================================
+        // NAVEGACIÓN
+        // ============================================
+        function loadPage(page) {
+            console.log(`📄 loadPage llamada con: ${page}`);
+            
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            const activeLink = document.querySelector(`.sidebar nav a[data-page="${page}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            console.log('✅ Sidebar actualizado');
+
+            const titles = {
+                dashboard: 'Dashboard',
+                equipos: 'Gestión de Equipos',
+                ventas: 'Reporte de Ventas',
+                usuarios: 'Gestión de Usuarios'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+            console.log(`✅ Título actualizado: ${titles[page]}`);
+
+            const content = document.getElementById('pageContent');
+            console.log(`📦 Cargando contenido para: ${page}`);
+            
+            if (page === 'dashboard') {
+                console.log('📊 Ejecutando renderDashboard...');
+                renderDashboard(content);
+            } else if (page === 'equipos') {
+                console.log('📱 Ejecutando renderEquipos...');
+                renderEquipos(content);
+            } else if (page === 'ventas') {
+                console.log('💰 Ejecutando renderVentas...');
+                renderVentas(content);
+            } else if (page === 'usuarios') {
+                console.log('👥 Ejecutando renderUsuarios...');
+                renderUsuarios(content);
+            }
+
+            history.pushState({ page }, '', `#${page}`);
+            console.log('✅ URL actualizada');
+        }
+
+        window.addEventListener('popstate', function(e) {
+            const page = e.state?.page || 'dashboard';
+            console.log(`🔙 Popstate: ${page}`);
+            loadPage(page);
+        });
+
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.dataset.page;
+                console.log(`🖱️ Click en sidebar: ${page}`);
+                loadPage(page);
+            });
+        });
+
+        // ============================================
+        // FUNCIONES DE MODAL
+        // ============================================
+        function openModal(html) {
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modal').classList.add('active');
+            console.log('📂 Modal abierto');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            console.log('📂 Modal cerrado');
+        }
+
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        async function renderDashboard(container) {
+            console.log('🔄 renderDashboard iniciado');
+            
+            container.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando datos del dashboard...</p>
+                </div>
+            `;
+            console.log('✅ HTML de carga mostrado');
+
+            try {
+                console.log('📡 Iniciando peticiones a la API...');
+                
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                console.log(`👤 Token presente: ${user?.token ? '✅ Sí' : '❌ No'}`);
+
+                const [resumen, ventasHoy, stock, stockBajo] = await Promise.all([
+                    fetchAPI('/api/reportes/resumen').then(r => r.json()),
+                    fetchAPI('/api/reportes/ventas-hoy').then(r => r.json()),
+                    fetchAPI('/api/stock').then(r => r.json()),
+                    fetchAPI('/api/reportes/stock-bajo?limite=3').then(r => r.json()).catch(() => [])
+                ]);
+
+                console.log('📊 Datos recibidos:', { resumen, ventasHoy, stock, stockBajo });
+
+                const totalStock = stock.reduce((acc, item) => acc + (item.disponibles || 0), 0);
+
+                let alertasHtml = '';
+                if (stockBajo && stockBajo.length > 0) {
+                    alertasHtml = `
+                        <div class="alertas-stock show">
+                            <h4><i class="fas fa-exclamation-triangle"></i> ⚠️ Stock Bajo</h4>
+                            ${stockBajo.map(item => `
+                                <span class="alerta-item">
+                                    ${item.marca} ${item.modelo}: ${item.disponibles} unidades
+                                </span>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    ${alertasHtml}
+                    <div class="dashboard-cards">
+                        <div class="card">
+                            <div class="card-icon"><i class="fas fa-boxes"></i></div>
+                            <div class="card-title">Stock Total</div>
+                            <div class="card-value">${totalStock}</div>
+                            <div class="card-change">Equipos disponibles</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon"><i class="fas fa-tags"></i></div>
+                            <div class="card-title">Ventas Hoy</div>
+                            <div class="card-value">${ventasHoy.total_ventas || 0}</div>
+                            <div class="card-change">${ventasHoy.vendedores_activos || 0} vendedores activos</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="card-title">Ingresos Hoy</div>
+                            <div class="card-value">S/ ${(ventasHoy.total_ingresos || 0).toFixed(2)}</div>
+                            <div class="card-change">Total del día</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon"><i class="fas fa-users"></i></div>
+                            <div class="card-title">Total Equipos</div>
+                            <div class="card-value">${resumen.total_equipos || 0}</div>
+                            <div class="card-change">${resumen.vendidos || 0} vendidos</div>
+                        </div>
+                    </div>
+                    <div class="charts-row">
+                        <div class="chart-container">
+                            <h3>📈 Ventas por Día</h3>
+                            <canvas id="graficoVentas"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>📊 Stock por Marca</h3>
+                            <canvas id="graficoStock"></canvas>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2>📦 Stock por Modelo</h2>
+                        </div>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr><th>Marca</th><th>Modelo</th><th>Disponibles</th><th>Precio desde</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${stock.length === 0 ? `
+                                        <tr><td colspan="4" style="text-align:center;color:#888;">No hay equipos en stock</td></tr>
+                                    ` : stock.map(item => `
+                                        <tr>
+                                            <td><strong>${item.marca}</strong></td>
+                                            <td>${item.modelo}</td>
+                                            <td><span class="badge badge-disponible">${item.disponibles}</span></td>
+                                            <td>S/ ${item.precio_desde ? item.precio_desde.toFixed(2) : '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                setTimeout(() => initCharts(stock, ventasHoy), 300);
+                console.log('✅ Dashboard renderizado correctamente');
+
+            } catch (error) {
+                console.error('❌ Error en dashboard:', error);
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#dc3545;">
+                        <i class="fas fa-exclamation-triangle" style="font-size:40px;"></i>
+                        <p>❌ Error al cargar los datos: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadPage('dashboard')" style="margin-top:15px;">
+                            <i class="fas fa-sync"></i> Reintentar
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // GRÁFICOS
+        // ============================================
+        function initCharts(stock, ventasHoy) {
+            try {
+                const ctxStock = document.getElementById('graficoStock');
+                if (ctxStock) {
+                    const marcas = {};
+                    stock.forEach(item => {
+                        marcas[item.marca] = (marcas[item.marca] || 0) + item.disponibles;
+                    });
+
+                    if (graficoStock) {
+                        graficoStock.destroy();
+                    }
+
+                    graficoStock = new Chart(ctxStock, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(marcas),
+                            datasets: [{
+                                data: Object.values(marcas),
+                                backgroundColor: ['#4fc3f7', '#81c784', '#ffb74d', '#f06292', '#ce93d8', '#4dd0e1'],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        font: { size: 10 }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const ctxVentas = document.getElementById('graficoVentas');
+                if (ctxVentas) {
+                    const dias = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+                    const valores = [2, 4, 3, 5, 7, 4, ventasHoy?.total_ventas || 0];
+
+                    if (graficoVentas) {
+                        graficoVentas.destroy();
+                    }
+
+                    graficoVentas = new Chart(ctxVentas, {
+                        type: 'bar',
+                        data: {
+                            labels: dias,
+                            datasets: [{
+                                label: 'Ventas',
+                                data: valores,
+                                backgroundColor: '#4fc3f7',
+                                borderColor: '#1a3c5e',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { stepSize: 1 }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('⚠️ Error al inicializar gráficos:', e);
+            }
+        }
+
+        // ============================================
+        // EQUIPOS CON FILTROS Y MARCAS
+        // ============================================
+        async function renderEquipos(container) {
+            console.log('🔄 renderEquipos iniciado');
+            
+            container.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando equipos...</p>
+                </div>
+            `;
+
+            try {
+                const [equipos, modelos, marcas] = await Promise.all([
+                    fetchAPI('/api/equipos').then(r => r.json()),
+                    fetchAPI('/api/modelos').then(r => r.json()),
+                    fetchAPI('/api/marcas').then(r => r.json())
+                ]);
+
+                console.log(`📱 Equipos cargados: ${equipos.length}`);
+                console.log(`📋 Modelos cargados: ${modelos.length}`);
+                console.log(`🏷️ Marcas cargadas: ${marcas.length}`);
+
+                const getBadgeClass = (estado) => {
+                    if (estado === 'disponible') return 'badge-disponible';
+                    if (estado === 'vendido') return 'badge-vendido';
+                    if (estado === 'retirado') return 'badge-retirado';
+                    return 'badge-reservado';
+                };
+
+                container.innerHTML = `
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2>📱 Equipos Registrados</h2>
+                            <div class="actions">
+                                <button class="btn btn-success" onclick="showRegistrarEquipo()">
+                                    <i class="fas fa-plus"></i> Registrar Equipo
+                                </button>
+                                <button class="btn btn-primary" onclick="loadPage('equipos')">
+                                    <i class="fas fa-sync"></i> Actualizar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="filtros">
+                            <input type="text" id="filtroMarca" placeholder="🔍 Marca" />
+                            <input type="text" id="filtroModelo" placeholder="🔍 Modelo" />
+                            <input type="date" id="filtroFechaInicio" />
+                            <input type="date" id="filtroFechaFin" />
+                            <select id="filtroEstado">
+                                <option value="">Todos los estados</option>
+                                <option value="disponible">Disponible</option>
+                                <option value="vendido">Vendido</option>
+                                <option value="retirado">Retirado</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" onclick="aplicarFiltrosEquipos()">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosEquipos()">
+                                <i class="fas fa-undo"></i> Limpiar
+                            </button>
+                        </div>
+                        <div class="table-scroll">
+                            <table id="tablaEquipos">
+                                <thead>
+                                    <tr>
+                                        <th>IMEI</th>
+                                        <th>Marca</th>
+                                        <th>Modelo</th>
+                                        <th>Color</th>
+                                        <th>Almacenamiento</th>
+                                        <th>Estado</th>
+                                        <th>Precio</th>
+                                        <th>F. Ingreso</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaEquiposBody">
+                                    ${equipos.length === 0 ? `
+                                        <tr><td colspan="9" style="text-align:center;color:#888;">No hay equipos registrados</td></tr>
+                                    ` : equipos.map(e => {
+                                        const badgeClass = getBadgeClass(e.estado);
+                                        return `
+                                        <tr>
+                                            <td><code>${e.imei}</code></td>
+                                            <td>${e.marca}</td>
+                                            <td>${e.modelo}</td>
+                                            <td>${e.color || '-'}</td>
+                                            <td>${e.almacenamiento || '-'}</td>
+                                            <td><span class="badge ${badgeClass}">${e.estado}</span></td>
+                                            <td>S/ ${e.precio_venta ? e.precio_venta.toFixed(2) : '-'}</td>
+                                            <td>${e.fecha_ingreso ? new Date(e.fecha_ingreso).toLocaleDateString('es-PE') : '-'}</td>
+                                            <td>
+                                                <div class="acciones-venta">
+                                                    ${e.estado === 'disponible' ? `
+                                                        <button class="btn btn-success btn-sm" onclick="showVenderEquipo(${e.id}, '${e.imei}')">
+                                                            <i class="fas fa-dollar-sign"></i> Vender
+                                                        </button>
+                                                        <button class="btn btn-warning btn-sm" onclick="retirarEquipo(${e.id}, '${e.imei}')">
+                                                            <i class="fas fa-trash-alt"></i> Retirar
+                                                        </button>
+                                                    ` : `
+                                                        <span style="color:#888;font-size:12px;">${e.estado === 'vendido' ? '✅ Vendido' : '🗑️ Retirado'}</span>
+                                                    `}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `}).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="modelosData" style="display:none;">${JSON.stringify(modelos)}</div>
+                    <div id="marcasData" style="display:none;">${JSON.stringify(marcas)}</div>
+                `;
+                console.log('✅ Equipos renderizados correctamente');
+            } catch (error) {
+                console.error('❌ Error en equipos:', error);
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#dc3545;">
+                        <p>❌ Error al cargar los equipos: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadPage('equipos')">Reintentar</button>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // FILTROS DE EQUIPOS
+        // ============================================
+        async function aplicarFiltrosEquipos() {
+            console.log('🔍 Aplicando filtros a equipos...');
+            
+            const marca = document.getElementById('filtroMarca')?.value?.trim() || '';
+            const modelo = document.getElementById('filtroModelo')?.value?.trim() || '';
+            const fechaInicio = document.getElementById('filtroFechaInicio')?.value || '';
+            const fechaFin = document.getElementById('filtroFechaFin')?.value || '';
+            const estado = document.getElementById('filtroEstado')?.value || '';
+
+            console.log('📝 Valores de filtros:', { marca, modelo, fechaInicio, fechaFin, estado });
+
+            const params = new URLSearchParams();
+            if (marca) params.append('marca', marca);
+            if (modelo) params.append('modelo', modelo);
+            if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+            if (fechaFin) params.append('fecha_fin', fechaFin);
+            if (estado) params.append('estado', estado);
+
+            const paramsStr = params.toString();
+            console.log('📤 Parámetros enviados:', paramsStr);
+
+            try {
+                const url = `/api/equipos${paramsStr ? '?' + paramsStr : ''}`;
+                console.log('📤 URL completa:', url);
+                
+                const response = await fetchAPI(url);
+                const equipos = await response.json();
+
+                console.log(`📥 Equipos recibidos: ${equipos.length}`);
+
+                const tbody = document.getElementById('tablaEquiposBody');
+                if (!tbody) {
+                    console.error('❌ No se encontró el tbody de equipos');
+                    return;
+                }
+
+                const getBadgeClass = (estado) => {
+                    if (estado === 'disponible') return 'badge-disponible';
+                    if (estado === 'vendido') return 'badge-vendido';
+                    if (estado === 'retirado') return 'badge-retirado';
+                    return 'badge-reservado';
+                };
+
+                if (!equipos || equipos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#888;">No hay equipos que coincidan con los filtros</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = equipos.map(e => {
+                    const badgeClass = getBadgeClass(e.estado);
+                    return `
+                        <tr>
+                            <td><code>${e.imei || '-'}</code></td>
+                            <td>${e.marca || '-'}</td>
+                            <td>${e.modelo || '-'}</td>
+                            <td>${e.color || '-'}</td>
+                            <td>${e.almacenamiento || '-'}</td>
+                            <td><span class="badge ${badgeClass}">${e.estado || '-'}</span></td>
+                            <td>S/ ${e.precio_venta ? e.precio_venta.toFixed(2) : '-'}</td>
+                            <td>${e.fecha_ingreso ? new Date(e.fecha_ingreso).toLocaleDateString('es-PE') : '-'}</td>
+                            <td>
+                                <div class="acciones-venta">
+                                    ${e.estado === 'disponible' ? `
+                                        <button class="btn btn-success btn-sm" onclick="showVenderEquipo(${e.id}, '${e.imei}')">
+                                            <i class="fas fa-dollar-sign"></i> Vender
+                                        </button>
+                                        <button class="btn btn-warning btn-sm" onclick="retirarEquipo(${e.id}, '${e.imei}')">
+                                            <i class="fas fa-trash-alt"></i> Retirar
+                                        </button>
+                                    ` : `
+                                        <span style="color:#888;font-size:12px;">${e.estado === 'vendido' ? '✅ Vendido' : '🗑️ Retirado'}</span>
+                                    `}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                console.log(`✅ Filtros aplicados: ${equipos.length} resultados`);
+            } catch (error) {
+                console.error('❌ Error al aplicar filtros:', error);
+                alert('❌ Error al filtrar equipos: ' + error.message);
+            }
+        }
+
+        function limpiarFiltrosEquipos() {
+            console.log('🧹 Limpiando filtros de equipos...');
+            document.getElementById('filtroMarca').value = '';
+            document.getElementById('filtroModelo').value = '';
+            document.getElementById('filtroFechaInicio').value = '';
+            document.getElementById('filtroFechaFin').value = '';
+            document.getElementById('filtroEstado').value = '';
+            loadPage('equipos');
+        }
+
+        // ============================================
+        // VENTAS CON FILTROS
+        // ============================================
+        async function renderVentas(container) {
+            console.log('🔄 renderVentas iniciado');
+            
+            container.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando ventas...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetchAPI('/api/reportes/ventas');
+                const data = await response.json();
+                let ventas = Array.isArray(data) ? data : (data.data ? data.data : []);
+
+                console.log(`💰 Ventas cargadas: ${ventas.length}`);
+
+                container.innerHTML = `
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2>💰 Historial de Ventas</h2>
+                            <div class="actions">
+                                <button class="btn btn-success btn-sm" onclick="descargarReporteExcel()">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                                <button class="btn btn-primary" onclick="loadPage('ventas')">
+                                    <i class="fas fa-sync"></i> Actualizar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="filtros">
+                            <input type="date" id="filtroVentaInicio" />
+                            <input type="date" id="filtroVentaFin" />
+                            <input type="text" id="filtroVentaMarca" placeholder="🔍 Marca" />
+                            <input type="text" id="filtroVentaModelo" placeholder="🔍 Modelo" />
+                            <button class="btn btn-primary btn-sm" onclick="aplicarFiltrosVentas()">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosVentas()">
+                                <i class="fas fa-undo"></i> Limpiar
+                            </button>
+                        </div>
+                        <div class="table-scroll">
+                            <table id="tablaVentas">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>IMEI</th>
+                                        <th>Marca</th>
+                                        <th>Modelo</th>
+                                        <th>Precio</th>
+                                        <th>Método</th>
+                                        <th>Cliente</th>
+                                        <th>Vendedor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaVentasBody">
+                                    ${ventas.length === 0 ? `
+                                        <tr><td colspan="8" style="text-align:center;color:#888;">No hay ventas registradas</td></tr>
+                                    ` : ventas.map(v => `
+                                        <tr>
+                                            <td>${v.fecha ? new Date(v.fecha).toLocaleDateString('es-PE') + ' ' + new Date(v.fecha).toLocaleTimeString('es-PE') : '-'}</td>
+                                            <td><code>${v.imei || '-'}</code></td>
+                                            <td>${v.marca || '-'}</td>
+                                            <td>${v.modelo || '-'}</td>
+                                            <td><strong>S/ ${(v.precio || v.precio_final || 0).toFixed(2)}</strong></td>
+                                            <td>${v.metodo_pago || '-'}</td>
+                                            <td>${v.cliente || v.cliente_nombre || '-'}</td>
+                                            <td>${v.vendedor || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                console.log('✅ Ventas renderizadas correctamente');
+            } catch (error) {
+                console.error('❌ Error en ventas:', error);
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#dc3545;">
+                        <p>❌ Error al cargar las ventas: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadPage('ventas')">Reintentar</button>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // FILTROS DE VENTAS
+        // ============================================
+        async function aplicarFiltrosVentas() {
+            console.log('🔍 Aplicando filtros a ventas...');
+            
+            const fechaInicio = document.getElementById('filtroVentaInicio')?.value || '';
+            const fechaFin = document.getElementById('filtroVentaFin')?.value || '';
+            const marca = document.getElementById('filtroVentaMarca')?.value?.trim() || '';
+            const modelo = document.getElementById('filtroVentaModelo')?.value?.trim() || '';
+
+            const params = new URLSearchParams();
+            if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+            if (fechaFin) params.append('fecha_fin', fechaFin);
+            if (marca) params.append('marca', marca);
+            if (modelo) params.append('modelo', modelo);
+
+            const paramsStr = params.toString();
+            console.log('📤 Parámetros enviados:', paramsStr);
+
+            try {
+                const url = `/api/reportes/ventas${paramsStr ? '?' + paramsStr : ''}`;
+                console.log('📤 URL:', url);
+                
+                const response = await fetchAPI(url);
+                let ventas = await response.json();
+                
+                if (!Array.isArray(ventas)) {
+                    ventas = ventas.data || [];
+                }
+
+                console.log(`📥 Ventas filtradas: ${ventas.length}`);
+
+                const tbody = document.getElementById('tablaVentasBody');
+                if (!tbody) return;
+
+                if (ventas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;">No hay ventas que coincidan con los filtros</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = ventas.map(v => `
+                    <tr>
+                        <td>${v.fecha ? new Date(v.fecha).toLocaleDateString('es-PE') + ' ' + new Date(v.fecha).toLocaleTimeString('es-PE') : '-'}</td>
+                        <td><code>${v.imei || '-'}</code></td>
+                        <td>${v.marca || '-'}</td>
+                        <td>${v.modelo || '-'}</td>
+                        <td><strong>S/ ${(v.precio || v.precio_final || 0).toFixed(2)}</strong></td>
+                        <td>${v.metodo_pago || '-'}</td>
+                        <td>${v.cliente || v.cliente_nombre || '-'}</td>
+                        <td>${v.vendedor || '-'}</td>
+                    </tr>
+                `).join('');
+
+                console.log(`✅ Filtros aplicados: ${ventas.length} resultados`);
+            } catch (error) {
+                console.error('❌ Error al aplicar filtros:', error);
+                alert('❌ Error al filtrar ventas: ' + error.message);
+            }
+        }
+
+        function limpiarFiltrosVentas() {
+            console.log('🧹 Limpiando filtros de ventas...');
+            document.getElementById('filtroVentaInicio').value = '';
+            document.getElementById('filtroVentaFin').value = '';
+            document.getElementById('filtroVentaMarca').value = '';
+            document.getElementById('filtroVentaModelo').value = '';
+            loadPage('ventas');
+        }
+
+        // ============================================
+        // EXPORTAR REPORTE EXCEL
+        // ============================================
+        async function descargarReporteExcel() {
+            console.log('📥 Descargando reporte con filtros...');
+            
+            const fechaInicio = document.getElementById('filtroVentaInicio')?.value || '';
+            const fechaFin = document.getElementById('filtroVentaFin')?.value || '';
+            const marca = document.getElementById('filtroVentaMarca')?.value?.trim() || '';
+            const modelo = document.getElementById('filtroVentaModelo')?.value?.trim() || '';
+
+            const params = new URLSearchParams();
+            if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+            if (fechaFin) params.append('fecha_fin', fechaFin);
+            if (marca) params.append('marca', marca);
+            if (modelo) params.append('modelo', modelo);
+
+            const paramsStr = params.toString();
+            console.log('📤 Parámetros de exportación:', paramsStr);
+
+            try {
+                const url = `/api/reportes/exportar/ventas${paramsStr ? '?' + paramsStr : ''}`;
+                console.log('📤 URL:', url);
+                
+                const response = await fetchAPI(url);
+                const data = await response.json();
+
+                console.log('📥 Datos de exportación:', data);
+
+                if (!data.success || !data.data || data.data.length === 0) {
+                    alert('❌ No hay datos para exportar con los filtros seleccionados.');
+                    return;
+                }
+
+                const headers = ['Fecha', 'IMEI', 'Marca', 'Modelo', 'Precio', 'Método Pago', 'Cliente', 'Vendedor'];
+                const rows = data.data.map(item => [
+                    item.fecha || '',
+                    item.imei || '',
+                    item.marca || '',
+                    item.modelo || '',
+                    item.precio || 0,
+                    item.metodo_pago || '',
+                    item.cliente || '',
+                    item.vendedor || ''
+                ]);
+
+                let csv = headers.join(',') + '\n';
+                rows.forEach(row => {
+                    csv += row.join(',') + '\n';
+                });
+
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const urlDownload = URL.createObjectURL(blob);
+                
+                let nombreArchivo = 'reporte_ventas';
+                if (fechaInicio) nombreArchivo += `_desde_${fechaInicio}`;
+                if (fechaFin) nombreArchivo += `_hasta_${fechaFin}`;
+                if (marca) nombreArchivo += `_${marca}`;
+                nombreArchivo += `_${new Date().toISOString().split('T')[0]}.csv`;
+                
+                link.setAttribute('href', urlDownload);
+                link.setAttribute('download', nombreArchivo);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(urlDownload);
+
+                console.log('✅ Reporte descargado correctamente');
+                alert(`✅ Reporte exportado con ${data.data.length} registros.`);
+            } catch (error) {
+                console.error('❌ Error al descargar reporte:', error);
+                alert('❌ Error al descargar el reporte: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // USUARIOS
+        // ============================================
+        async function renderUsuarios(container) {
+            console.log('🔄 renderUsuarios iniciado');
+            
+            container.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando usuarios...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetchAPI('/api/usuarios');
+                const data = await response.json();
+                let usuarios = Array.isArray(data) ? data : (data.data ? data.data : []);
+
+                console.log(`👥 Usuarios cargados: ${usuarios.length}`);
+
+                container.innerHTML = `
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2>👥 Usuarios del Sistema</h2>
+                            <div class="actions">
+                                <button class="btn btn-success" onclick="showCrearUsuario()">
+                                    <i class="fas fa-user-plus"></i> Nuevo Usuario
+                                </button>
+                                <button class="btn btn-primary" onclick="loadPage('usuarios')">
+                                    <i class="fas fa-sync"></i> Actualizar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Nombre</th>
+                                        <th>Rol</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${usuarios.length === 0 ? `
+                                        <tr><td colspan="5" style="text-align:center;color:#888;">No hay usuarios registrados</td></tr>
+                                    ` : usuarios.map(u => `
+                                        <tr>
+                                            <td>${u.email || '-'}</td>
+                                            <td>${u.nombre || '-'}</td>
+                                            <td><span class="badge ${u.rol === 'admin' ? 'badge-disponible' : 'badge-reservado'}">${u.rol || 'vendedor'}</span></td>
+                                            <td><span class="badge ${u.activo !== false ? 'badge-disponible' : 'badge-vendido'}">${u.activo !== false ? 'Activo' : 'Inactivo'}</span></td>
+                                            <td>
+                                                <button class="btn btn-warning btn-sm" onclick="showEditarUsuario('${u.id}', '${u.email}', '${u.nombre || ''}', '${u.rol || 'vendedor'}', ${u.activo !== false})">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </button>
+                                                ${u.activo !== false ? `
+                                                    <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.id}', '${u.email}')">
+                                                        <i class="fas fa-user-slash"></i> Desactivar
+                                                    </button>
+                                                ` : `
+                                                    <button class="btn btn-success btn-sm" onclick="activarUsuario('${u.id}', '${u.email}')">
+                                                        <i class="fas fa-user-check"></i> Activar
+                                                    </button>
+                                                `}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                console.log('✅ Usuarios renderizados correctamente');
+            } catch (error) {
+                console.error('❌ Error en usuarios:', error);
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#dc3545;">
+                        <p>❌ Error al cargar los usuarios: ${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadPage('usuarios')">Reintentar</button>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // REGISTRAR EQUIPO - CON OPCIÓN DE AGREGAR MARCA Y MODELO
+        // ============================================
+        function showRegistrarEquipo() {
+            console.log('📱 Mostrando modal registrar equipo');
+            
+            const modelosData = document.getElementById('modelosData');
+            const marcasData = document.getElementById('marcasData');
+            
+            let modelos = [];
+            let marcas = [];
+            try {
+                modelos = modelosData ? JSON.parse(modelosData.textContent) : [];
+                marcas = marcasData ? JSON.parse(marcasData.textContent) : [];
+            } catch (e) {
+                console.error('Error al parsear datos:', e);
+                modelos = [];
+                marcas = [];
+            }
+
+            let optionsModelos = modelos.map(m =>
+                `<option value="${m.id}">${m.marca} - ${m.modelo}</option>`
+            ).join('');
+
+            let optionsMarcas = marcas.map(m =>
+                `<option value="${m.id}">${m.nombre}</option>`
+            ).join('');
+            
+            optionsMarcas += `<option value="nuevo" style="color: #28a745; font-weight: bold;">➕ Agregar Nueva Marca</option>`;
+
+            openModal(`
+                <h2><i class="fas fa-mobile-alt"></i> Registrar Equipo</h2>
+                <form id="formRegistrarEquipo" onsubmit="registrarEquipo(event)">
+                    <div class="form-group">
+                        <label>Marca</label>
+                        <select id="marca_id" required style="flex: 1;" onchange="toggleNuevaMarca()">
+                            <option value="">Seleccionar...</option>
+                            ${optionsMarcas}
+                        </select>
+                    </div>
+                    
+                    <div id="nuevaMarcaField" style="display: none; border-left: 3px solid #28a745; padding-left: 15px; margin-top: 10px;">
+                        <div class="form-group">
+                            <label style="color: #28a745;">📝 Nueva Marca</label>
+                            <input type="text" id="nueva_marca" placeholder="Ej: Google, OnePlus, Huawei" />
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <select id="modelo_id" required>
+                            <option value="">Seleccionar...</option>
+                            ${optionsModelos}
+                        </select>
+                        <small style="color: #888; font-size: 12px;">Si el modelo no está en la lista, escríbelo abajo</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nuevo Modelo (opcional)</label>
+                        <input type="text" id="nuevo_modelo" placeholder="Ej: Pixel 9 Pro, Nord 4" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>IMEI</label>
+                        <input type="text" id="imei" placeholder="123456789012345" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <input type="text" id="color" placeholder="Negro / Blanco / Azul" />
+                    </div>
+                    <div class="form-group">
+                        <label>Almacenamiento</label>
+                        <input type="text" id="almacenamiento" placeholder="128GB / 256GB" />
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Compra (S/)</label>
+                        <input type="number" id="precio_compra" step="0.01" placeholder="600.00" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Venta (S/)</label>
+                        <input type="number" id="precio_venta" step="0.01" placeholder="750.00" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <input type="text" id="observaciones" placeholder="Opcional..." />
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-danger" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Registrar
+                        </button>
+                    </div>
+                </form>
+            `);
+        }
+
+        function toggleNuevaMarca() {
+            const select = document.getElementById('marca_id');
+            const field = document.getElementById('nuevaMarcaField');
+            if (select.value === 'nuevo') {
+                field.style.display = 'block';
+                document.getElementById('nueva_marca').focus();
+            } else {
+                field.style.display = 'none';
+                document.getElementById('nueva_marca').value = '';
+            }
+        }
+
+        async function cargarMarcas() {
+            try {
+                const response = await fetchAPI('/api/marcas');
+                const marcas = await response.json();
+                const marcasData = document.getElementById('marcasData');
+                if (marcasData) {
+                    marcasData.textContent = JSON.stringify(marcas);
+                }
+                console.log('✅ Marcas actualizadas:', marcas.length);
+            } catch (error) {
+                console.error('❌ Error al cargar marcas:', error);
+            }
+        }
+
+        async function cargarModelos() {
+            try {
+                const response = await fetchAPI('/api/modelos');
+                const modelos = await response.json();
+                const modelosData = document.getElementById('modelosData');
+                if (modelosData) {
+                    modelosData.textContent = JSON.stringify(modelos);
+                }
+                console.log('✅ Modelos actualizados:', modelos.length);
+            } catch (error) {
+                console.error('❌ Error al cargar modelos:', error);
+            }
+        }
+
+        async function registrarEquipo(e) {
+            e.preventDefault();
+            console.log('📝 Registrando equipo...');
+            
+            const marcaSelect = document.getElementById('marca_id');
+            const modeloSelect = document.getElementById('modelo_id');
+            const nuevoModeloInput = document.getElementById('nuevo_modelo');
+            
+            let marcaId = parseInt(marcaSelect.value);
+            let modeloId = parseInt(modeloSelect.value);
+            
+            // 1. Verificar si se seleccionó "Agregar Nueva Marca"
+            if (marcaSelect.value === 'nuevo') {
+                const nuevaMarca = document.getElementById('nueva_marca').value.trim();
+                
+                if (!nuevaMarca) {
+                    alert('❌ Debes ingresar el nombre de la nueva marca.');
+                    return;
+                }
+                
+                console.log(`📝 Creando nueva marca: ${nuevaMarca}`);
+                
+                try {
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    
+                    const createMarcaResponse = await fetch(`${API_URL}/api/marcas`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
+                        body: JSON.stringify({ nombre: nuevaMarca })
+                    });
+                    
+                    const marcaData = await createMarcaResponse.json();
+                    marcaId = marcaData.id;
+                    console.log(`✅ Marca creada: ${marcaId}`);
+                    
+                    await cargarMarcas();
+                    
+                } catch (error) {
+                    console.error('❌ Error al crear marca:', error);
+                    alert('❌ Error al crear la nueva marca: ' + error.message);
+                    return;
+                }
+            }
+            
+            // 2. Verificar si se ingresó un nuevo modelo
+            const nuevoModelo = nuevoModeloInput.value.trim();
+            
+            if (nuevoModelo) {
+                console.log(`📝 Creando nuevo modelo: ${nuevoModelo} para marca ${marcaId}`);
+                
+                try {
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    
+                    const createModeloResponse = await fetch(`${API_URL}/api/modelos`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
+                        body: JSON.stringify({
+                            marca_id: marcaId,
+                            nombre: nuevoModelo,
+                            descripcion: ''
+                        })
+                    });
+                    
+                    const modeloData = await createModeloResponse.json();
+                    modeloId = modeloData.id;
+                    console.log(`✅ Modelo creado: ${modeloId}`);
+                    
+                    await cargarModelos();
+                    
+                } catch (error) {
+                    console.error('❌ Error al crear modelo:', error);
+                    alert('❌ Error al crear el nuevo modelo: ' + error.message);
+                    return;
+                }
+            }
+            
+            // 3. Validar que se haya seleccionado un modelo
+            if (!modeloId || isNaN(modeloId)) {
+                alert('❌ Debes seleccionar un modelo o ingresar uno nuevo.');
+                return;
+            }
+            
+            // 4. Registrar el equipo
+            const data = {
+                modelo_id: modeloId,
+                imei: document.getElementById('imei').value,
+                color: document.getElementById('color').value,
+                almacenamiento: document.getElementById('almacenamiento').value,
+                precio_compra: parseFloat(document.getElementById('precio_compra').value),
+                precio_venta: parseFloat(document.getElementById('precio_venta').value),
+                observaciones: document.getElementById('observaciones').value
+            };
+
+            try {
+                const response = await fetchAPI('/api/equipos', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    closeModal();
+                    loadPage('equipos');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al registrar'));
+                }
+            } catch (error) {
+                console.error('❌ Error al registrar equipo:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // VENDER EQUIPO
+        // ============================================
+        function showVenderEquipo(id, imei) {
+            console.log(`💰 Mostrando modal vender equipo: ${imei}`);
+            openModal(`
+                <h2><i class="fas fa-dollar-sign"></i> Vender Equipo</h2>
+                <form id="formVenderEquipo" onsubmit="venderEquipo(event)">
+                    <p><strong>IMEI:</strong> ${imei}</p>
+                    <input type="hidden" id="equipo_id" value="${id}" />
+                    <div class="form-group">
+                        <label>Precio Final (S/)</label>
+                        <input type="number" id="precio_final" step="0.01" placeholder="750.00" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="metodo_pago" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="yape">Yape</option>
+                            <option value="plin">Plin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente (opcional)</label>
+                        <input type="text" id="cliente_nombre" placeholder="Nombre del cliente" />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono (opcional)</label>
+                        <input type="text" id="cliente_telefono" placeholder="999 999 999" />
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-danger" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Confirmar Venta
+                        </button>
+                    </div>
+                </form>
+            `);
+        }
+
+        async function venderEquipo(e) {
+            e.preventDefault();
+            console.log('💰 Registrando venta...');
+            
+            const data = {
+                equipo_id: parseInt(document.getElementById('equipo_id').value),
+                precio_final: parseFloat(document.getElementById('precio_final').value),
+                metodo_pago: document.getElementById('metodo_pago').value,
+                cliente_nombre: document.getElementById('cliente_nombre').value,
+                cliente_telefono: document.getElementById('cliente_telefono').value
+            };
+
+            try {
+                const response = await fetchAPI('/api/ventas', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    closeModal();
+                    loadPage('equipos');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al vender'));
+                }
+            } catch (error) {
+                console.error('❌ Error al vender:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // RETIRAR EQUIPO
+        // ============================================
+        async function retirarEquipo(id, imei) {
+            console.log(`🗑️ Retirando equipo: ${imei}`);
+            
+            const razon = prompt(`¿Por qué deseas retirar el equipo ${imei}?\n\nOpciones:\n- Dañado\n- Falla técnica\n- Robo\n- Otro (especificar)`);
+            
+            if (razon === null) {
+                console.log('❌ Retiro cancelado');
+                return;
+            }
+            
+            if (razon.trim() === '') {
+                alert('❌ Debes especificar una razón para retirar el equipo.');
+                return;
+            }
+
+            if (!confirm(`¿Seguro que deseas RETIRAR el equipo ${imei}?\n\nRazón: ${razon}\n\nEsta acción no se puede deshacer.`)) {
+                console.log('❌ Retiro cancelado');
+                return;
+            }
+
+            try {
+                const response = await fetchAPI('/api/equipos/retirar', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        equipo_id: id,
+                        razon: razon
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    loadPage('equipos');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al retirar el equipo'));
+                }
+            } catch (error) {
+                console.error('❌ Error al retirar equipo:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // CREAR USUARIO
+        // ============================================
+        function showCrearUsuario() {
+            console.log('👥 Mostrando modal crear usuario');
+            openModal(`
+                <h2><i class="fas fa-user-plus"></i> Nuevo Usuario</h2>
+                <form id="formCrearUsuario" onsubmit="crearUsuario(event)">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="usuario@tienda.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="password" placeholder="••••••••" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" id="nombre" placeholder="Nombre completo" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select id="rol" required>
+                            <option value="vendedor">Vendedor</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-danger" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Crear
+                        </button>
+                    </div>
+                </form>
+            `);
+        }
+
+        async function crearUsuario(e) {
+            e.preventDefault();
+            console.log('👥 Creando usuario...');
+            
+            const data = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                nombre: document.getElementById('nombre').value,
+                rol: document.getElementById('rol').value
+            };
+
+            try {
+                const response = await fetchAPI('/api/usuarios', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    closeModal();
+                    loadPage('usuarios');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al crear usuario'));
+                }
+            } catch (error) {
+                console.error('❌ Error al crear usuario:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // EDITAR USUARIO
+        // ============================================
+        function showEditarUsuario(id, email, nombre, rol, activo) {
+            console.log(`✏️ Editando usuario: ${email}`);
+            
+            const nombreEscapado = (nombre || '').replace(/"/g, '&quot;');
+            const emailEscapado = email.replace(/"/g, '&quot;');
+            
+            openModal(`
+                <h2><i class="fas fa-user-edit"></i> Editar Usuario</h2>
+                <form id="formEditarUsuario" onsubmit="editarUsuario(event)">
+                    <input type="hidden" id="edit_id" value="${id}" />
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="edit_email" value="${emailEscapado}" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" id="edit_nombre" value="${nombreEscapado}" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select id="edit_rol" required>
+                            <option value="vendedor" ${rol === 'vendedor' ? 'selected' : ''}>Vendedor</option>
+                            <option value="admin" ${rol === 'admin' ? 'selected' : ''}>Administrador</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="edit_activo" required>
+                            <option value="true" ${activo ? 'selected' : ''}>Activo</option>
+                            <option value="false" ${!activo ? 'selected' : ''}>Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva Contraseña (dejar en blanco para no cambiar)</label>
+                        <input type="password" id="edit_password" placeholder="••••••••" />
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-danger" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            `);
+        }
+
+        async function editarUsuario(e) {
+            e.preventDefault();
+            console.log('✏️ Guardando edición de usuario...');
+            
+            const id = document.getElementById('edit_id').value;
+            const email = document.getElementById('edit_email').value;
+            const nombre = document.getElementById('edit_nombre').value;
+            const rol = document.getElementById('edit_rol').value;
+            const activo = document.getElementById('edit_activo').value === 'true';
+            const password = document.getElementById('edit_password').value;
+
+            const data = {
+                email: email,
+                nombre: nombre,
+                rol: rol,
+                activo: activo
+            };
+
+            if (password && password.trim() !== '') {
+                data.password = password;
+            }
+
+            try {
+                const response = await fetchAPI(`/api/usuarios/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + (result.message || 'Usuario actualizado correctamente'));
+                    closeModal();
+                    loadPage('usuarios');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al actualizar usuario'));
+                }
+            } catch (error) {
+                console.error('❌ Error al editar usuario:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // ELIMINAR USUARIO
+        // ============================================
+        async function eliminarUsuario(id, email) {
+            console.log(`🗑️ Eliminando usuario: ${email}`);
+            
+            if (!confirm(`¿Seguro que deseas desactivar al usuario "${email}"?`)) {
+                console.log('❌ Eliminación cancelada');
+                return;
+            }
+
+            try {
+                const response = await fetchAPI(`/api/usuarios/${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    loadPage('usuarios');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al eliminar'));
+                }
+            } catch (error) {
+                console.error('❌ Error al eliminar usuario:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // ACTIVAR USUARIO
+        // ============================================
+        async function activarUsuario(id, email) {
+            console.log(`🔄 Activando usuario: ${email}`);
+            
+            if (!confirm(`¿Seguro que deseas activar al usuario "${email}"?`)) {
+                console.log('❌ Activación cancelada');
+                return;
+            }
+
+            try {
+                const response = await fetchAPI(`/api/usuarios/${id}/activar`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('✅ ' + result.message);
+                    loadPage('usuarios');
+                } else {
+                    alert('❌ ' + (result.detail || 'Error al activar'));
+                }
+            } catch (error) {
+                console.error('❌ Error al activar usuario:', error);
+                alert('❌ Error de conexión: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // LOGOUT
+        // ============================================
+        function logout() {
+            console.log('🚪 Cerrando sesión...');
+            if (confirm('¿Seguro que deseas cerrar sesión?')) {
+                localStorage.removeItem('user');
+                console.log('✅ Sesión cerrada');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+
+</body>
+</html>
