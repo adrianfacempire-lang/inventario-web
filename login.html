@@ -326,6 +326,26 @@
         // ============================================
         // VERIFICAR SESIÓN AL CARGAR
         // ============================================
+
+let redireccionRealizada = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (redireccionRealizada) return;
+    
+    const user = localStorage.getItem('user');
+    if (user) {
+        try {
+            const userData = JSON.parse(user);
+            if (userData.token && userData.rol === 'admin') {
+                redireccionRealizada = true;
+                window.location.href = 'index.html';
+                return;
+            }
+        } catch (e) {
+            localStorage.removeItem('user');
+        }
+    }
+});
         //document.addEventListener('DOMContentLoaded', function() {
         //    const user = localStorage.getItem('user');
         //    if (user) {
